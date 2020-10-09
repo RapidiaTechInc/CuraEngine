@@ -313,8 +313,11 @@ namespace cura
             std::this_thread::sleep_for(std::chrono::milliseconds(private_data->millisecUntilNextTry)); //Wait until we're connected. Check every XXXms.
         }
         log("Connected to %s:%i\n", ip.c_str(), port);
-        private_data->socket->sendMessage("message after connected");
-    }
+        std::shared_ptr<proto::Progress> message = std::make_shared<cura::proto::Progress>();
+        float progress_all_objects = (77 / 100);
+        message->set_amount(progress_all_objects);
+        private_data->socket->sendMessage(message);
+        }
 
     // On the one hand, don't expose the socket for normal use, but on the other, we need to mock it for unit-tests.
     void ArcusCommunication::setSocketMock(Arcus::Socket *socket)
