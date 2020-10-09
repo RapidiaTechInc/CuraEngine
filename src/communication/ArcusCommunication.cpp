@@ -313,7 +313,7 @@ namespace cura
             std::this_thread::sleep_for(std::chrono::milliseconds(private_data->millisecUntilNextTry)); //Wait until we're connected. Check every XXXms.
         }
         log("Connected to %s:%i\n", ip.c_str(), port);
-        log("exit connect");
+        private_data->socket->sendMessage("message after connected");
     }
 
     // On the one hand, don't expose the socket for normal use, but on the other, we need to mock it for unit-tests.
