@@ -1563,6 +1563,7 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
 
             if (path.perform_prime)
             {
+                gcode.writeComment(";BEFORE PRIME TRAIN");
                 gcode.writePrimeTrain(extruder.settings.get<Velocity>("speed_travel"));
                 gcode.writeRetraction(retraction_config);
             }
