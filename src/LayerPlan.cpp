@@ -1492,7 +1492,7 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
             extruder_nr = extruder_plan.extruder_nr;
 
             gcode.ResetLastEValueAfterWipe(prev_extruder);
-
+            gcode.writeComment(";BEFORE SWITCHING EXTRUDER");
             const ExtruderTrain& prev_extruder_train = Application::getInstance().current_slice->scene.extruders[prev_extruder];
             if (prev_extruder_train.settings.get<bool>("retraction_hop_after_extruder_switch"))
             {
@@ -1505,7 +1505,7 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
             }
 
             const ExtruderTrain& extruder = Application::getInstance().current_slice->scene.extruders[extruder_nr];
-
+            gcode.writeComment(";BEFORE WRITE TEMPERATURE");
             { // require printing temperature to be met
                 constexpr bool wait = true;
                 gcode.writeTemperatureCommand(extruder_nr, extruder_plan.required_start_temperature, wait);
@@ -1524,6 +1524,7 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
             }
 
             const double extra_prime_amount = extruder.settings.get<bool>("retraction_enable") ? extruder.settings.get<double>("switch_extruder_extra_prime_amount") : 0;
+            gcode.writeComment(";BEFORE ADDING EXTRA PRIME AMOUNT");
             gcode.addExtraPrimeAmount(extra_prime_amount);
         }
         else if (extruder_plan_idx == 0)
@@ -1543,6 +1544,7 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
                 }
             }
         }
+        gcode.writeComment(";BEFORE FAN COMMAND");
         gcode.writeFanCommand(extruder_plan.getFanSpeed());
         std::vector<GCodePath>& paths = extruder_plan.paths;
 
@@ -1573,9 +1575,9 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
                 // ignore travel moves to the current location to avoid needless change of acceleration/jerk
                 continue;
             }
-
             if (acceleration_enabled)
             {
+            gcode.writeComment(";BEFORE ACCELERATION");
                 if (path.config->isTravelPath())
                 {
                     gcode.writeTravelAcceleration(path.config->getAcceleration());
@@ -1587,11 +1589,13 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
             }
             if (jerk_enabled)
             {
+            gcode.writeComment(";BEFORE JERK");
                 gcode.writeJerk(path.config->getJerk());
             }
 
             if (path.retract)
             {
+                gcode.writeComment(";BEFORE RETRACTION");
                 gcode.writeRetraction(retraction_config);
                 if (path.perform_z_hop)
                 {
@@ -1605,6 +1609,7 @@ void LayerPlan::writeGCode(GCodeExport& gcode)
             }
             if (!path.config->isTravelPath() && last_extrusion_config != path.config)
             {
+                gcode.writeComment(";BEFORE WRITE TYPE COMMENT");
                 gcode.writeTypeComment(path.config->type);
                 if (path.config->isBridgePath())
                 {
