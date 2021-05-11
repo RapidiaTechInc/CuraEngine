@@ -322,13 +322,13 @@ void FffPolygonGenerator::slices2polygons(SliceDataStorage& storage, TimeKeeper&
     }
 
     const Settings& mesh_group_settings = Application::getInstance().current_slice->scene.current_mesh_group->settings;
-    if (isEmptyLayer(storage, 0) && !isEmptyLayer(storage, 1))
-    {
-        // the first layer is empty, the second is not empty, so remove the empty first layer as support isn't going to be generated under it.
-        // Do this irrespective of the value of remove_empty_first_layers as that setting is hidden when support is enabled and so cannot be relied upon
+    // if (isEmptyLayer(storage, 0) && !isEmptyLayer(storage, 1))
+    // {
+    //     // the first layer is empty, the second is not empty, so remove the empty first layer as support isn't going to be generated under it.
+    //     // Do this irrespective of the value of remove_empty_first_layers as that setting is hidden when support is enabled and so cannot be relied upon
 
-        removeEmptyFirstLayers(storage, storage.print_layer_count); // changes storage.print_layer_count!
-    }
+    //     removeEmptyFirstLayers(storage, storage.print_layer_count); // changes storage.print_layer_count!
+    // }
 
     log("Layer count: %i\n", storage.print_layer_count);
 
