@@ -322,13 +322,15 @@ void FffPolygonGenerator::slices2polygons(SliceDataStorage& storage, TimeKeeper&
     }
 
     const Settings& mesh_group_settings = Application::getInstance().current_slice->scene.current_mesh_group->settings;
-    // if (isEmptyLayer(storage, 0) && !isEmptyLayer(storage, 1))
-    // {
-    //     // the first layer is empty, the second is not empty, so remove the empty first layer as support isn't going to be generated under it.
-    //     // Do this irrespective of the value of remove_empty_first_layers as that setting is hidden when support is enabled and so cannot be relied upon
-
-    //     removeEmptyFirstLayers(storage, storage.print_layer_count); // changes storage.print_layer_count!
-    // }
+    const bool has_raft = mesh_group_settings.get<EPlatformAdhesion>("adhesion_type") == EPlatformAdhesion::RAFT;
+    if (!has_raft && isEmptyLayer(storage, 0) && !isEmptyLayer(storage, 1))
+    {
+        // the first layer is empty, the second is not empty, so remove the empty first layer as support isn't going to be generated under it.
+        // Do this irrespective of the value of remove_empty_first_layers as that setting is hidden when support is enabled and so cannot be relied upon
+        // RAPIDIA: Do not remove empty layers when there is a raft because we need to generate support
+        // interface to prevent the part from fusing into the raft.
+        removeEmptyFirstLayers(storage, storage.print_layer_count); // changes storage.print_layer_count!
+    }
 
     log("Layer count: %i\n", storage.print_layer_count);
 
@@ -346,7 +348,7 @@ void FffPolygonGenerator::slices2polygons(SliceDataStorage& storage, TimeKeeper&
     // brim depends on the first layer not being empty
     // only remove empty layers if we haven't generate support, because then support was added underneath the model.
     //   for some materials it's better to print on support than on the build plate.
-    if (mesh_group_settings.get<bool>("remove_empty_first_layers"))
+    if (!has_raft && mesh_group_settings.get<bool>("remove_empty_first_layers"))
     {
         removeEmptyFirstLayers(storage, storage.print_layer_count); // changes storage.print_layer_count!
     }
