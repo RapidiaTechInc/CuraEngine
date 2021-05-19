@@ -1560,19 +1560,33 @@ void AreaSupport::generateSupportInterfaceLayer(Polygons& support_areas, const P
     Polygons model = colliding_mesh_outlines.unionPolygons();
     interface_polygons = support_areas.intersection(model);
     interface_polygons = interface_polygons.offset(safety_offset).intersection(support_areas); //Make sure we don't generate any models that are not printable.
+    Polygons final_non_interface_support_area;
+    Polygons interface_expansion_area; // we need to expand the interface beyond the support area
+    // by a little to prevent fusing of part and support
     if (outline_offset != 0)
     {
-        interface_polygons = interface_polygons.offset(outline_offset);
-        if (outline_offset > 0) //The interface might exceed the area of the normal support.
+        // non-interface support assuming interface does not expand
+        final_non_interface_support_area = support_areas.difference(interface_polygons);
+        interface_expansion_area = interface_polygons.offset(outline_offset);
+        if (outline_offset > 0)
         {
-            interface_polygons = interface_polygons.intersection(support_areas);
+            // the interface expansion must not cut into either the model or the final support area.
+            interface_expansion_area = interface_expansion_area.difference(model).difference(final_non_interface_support_area);
         }
     }
     if (minimum_interface_area > 0.0)
     {
         interface_polygons.removeSmallAreas(minimum_interface_area);
+        interface_expansion_area.removeSmallAreas(minimum_interface_area);
     }
-    support_areas = support_areas.difference(interface_polygons);
+    if (outline_offset != 0) {
+        // need to union with non-expanded interface polygons because the expanded one is somehow
+        // too thin at some parts (especially first layer)
+        interface_polygons = interface_polygons.unionPolygons(interface_expansion_area);
+        support_areas = final_non_interface_support_area;
+    } else {
+        support_areas = support_areas.difference(interface_polygons);
+    }
 }
 
 }//namespace cura
