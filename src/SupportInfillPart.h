@@ -31,8 +31,9 @@ public:
     int inset_count_to_generate;  //!< The number of insets need to be generated from the outline. This is not the actual insets that will be generated.
     std::vector<std::vector<Polygons>> infill_area_per_combine_per_density;  //!< a list of separated sub-areas which requires different infill densities and combined thicknesses
                                                                               //   for infill_areas[x][n], x means the density level and n means the thickness
+    size_t extruder_nr; // which extruder is used for this infill part?
 
-    SupportInfillPart(const PolygonsPart& outline, coord_t support_line_width, int inset_count_to_generate = 0);
+    SupportInfillPart(const PolygonsPart& outline, coord_t support_line_width, size_t extruder_nr, int inset_count_to_generate);
 
     /*!
      * Initializes this SupportInfillPart by generating its insets and infill area.

@@ -926,15 +926,11 @@ LayerPlan& FffGcodeWriter::processLayer(const SliceDataStorage& storage, LayerIn
         processDraftShield(storage, gcode_layer);
     }
 
-    const size_t support_roof_extruder_nr = mesh_group_settings.get<ExtruderTrain&>("support_roof_extruder_nr").extruder_nr;
-    const size_t support_bottom_extruder_nr = mesh_group_settings.get<ExtruderTrain&>("support_bottom_extruder_nr").extruder_nr;
-    const size_t support_infill_extruder_nr = (layer_nr <= 0) ? mesh_group_settings.get<ExtruderTrain&>("support_extruder_nr_layer_0").extruder_nr : mesh_group_settings.get<ExtruderTrain&>("support_infill_extruder_nr").extruder_nr;
     bool disable_path_optimisation = false;
     
     for (const size_t& extruder_nr : extruder_order)
     {
-        if (include_helper_parts
-            && (extruder_nr == support_infill_extruder_nr || extruder_nr == support_roof_extruder_nr || extruder_nr == support_bottom_extruder_nr))
+        if (include_helper_parts)
         {
             addSupportToGCode(storage, gcode_layer, extruder_nr);
         }
@@ -2507,7 +2503,6 @@ bool FffGcodeWriter::addSupportToGCode(const SliceDataStorage& storage, LayerPla
     const Settings& mesh_group_settings = Application::getInstance().current_slice->scene.current_mesh_group->settings;
     const size_t support_roof_extruder_nr = mesh_group_settings.get<ExtruderTrain&>("support_roof_extruder_nr").extruder_nr;
     const size_t support_bottom_extruder_nr = mesh_group_settings.get<ExtruderTrain&>("support_bottom_extruder_nr").extruder_nr;
-    size_t support_infill_extruder_nr = (gcode_layer.getLayerNr() <= 0) ? mesh_group_settings.get<ExtruderTrain&>("support_extruder_nr_layer_0").extruder_nr : mesh_group_settings.get<ExtruderTrain&>("support_infill_extruder_nr").extruder_nr;
 
     const SupportLayer& support_layer = storage.support.supportLayers[std::max(0, gcode_layer.getLayerNr())];
     if (support_layer.support_bottom.empty() && support_layer.support_roof.empty() && support_layer.support_infill_parts.empty())
@@ -2515,10 +2510,8 @@ bool FffGcodeWriter::addSupportToGCode(const SliceDataStorage& storage, LayerPla
         return support_added;
     }
 
-    if (extruder_nr == support_infill_extruder_nr)
-    {
-        support_added |= processSupportInfill(storage, gcode_layer);
-    }
+    support_added |= processSupportInfill(storage, gcode_layer, extruder_nr);
+
     if (extruder_nr == support_roof_extruder_nr)
     {
         support_added |= addSupportRoofsToGCode(storage, gcode_layer);
@@ -2531,7 +2524,7 @@ bool FffGcodeWriter::addSupportToGCode(const SliceDataStorage& storage, LayerPla
 }
 
 
-bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, LayerPlan& gcode_layer) const
+bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, LayerPlan& gcode_layer, size_t extruder_nr) const
 {
     bool added_something = false;
     const SupportLayer& support_layer = storage.support.supportLayers[std::max(0, gcode_layer.getLayerNr())]; // account for negative layer numbers for raft filler layers
@@ -2541,8 +2534,8 @@ bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, Layer
         return added_something;
     }
 
+    // default extruder nr
     const Settings& mesh_group_settings = Application::getInstance().current_slice->scene.current_mesh_group->settings;
-    const size_t extruder_nr = (gcode_layer.getLayerNr() <= 0) ? mesh_group_settings.get<ExtruderTrain&>("support_extruder_nr_layer_0").extruder_nr : mesh_group_settings.get<ExtruderTrain&>("support_infill_extruder_nr").extruder_nr;
     const ExtruderTrain& infill_extruder = Application::getInstance().current_slice->scene.extruders[extruder_nr];
 
     coord_t default_support_line_distance = infill_extruder.settings.get<coord_t>("support_line_distance");
@@ -2588,7 +2581,13 @@ bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, Layer
     PathOrderOptimizer island_order_optimizer(gcode_layer.getLastPlannedPositionOrStartingPosition());
     for (size_t part_idx = 0; part_idx < support_layer.support_infill_parts.size(); ++part_idx)
     {
-        island_order_optimizer.addPolygon(support_layer.support_infill_parts[part_idx].outline[0]);
+        const SupportInfillPart& part = support_layer.support_infill_parts[part_idx];
+
+        // only consider the islands with the extruder we are looking at right now.
+        if (part.extruder_nr == extruder_nr)
+        {
+            island_order_optimizer.addPolygon(part.outline[0]);
+        }
     }
     island_order_optimizer.optimize();
 
