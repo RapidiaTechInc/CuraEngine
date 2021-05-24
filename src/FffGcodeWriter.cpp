@@ -927,12 +927,17 @@ LayerPlan& FffGcodeWriter::processLayer(const SliceDataStorage& storage, LayerIn
     }
 
     bool disable_path_optimisation = false;
+
+    printf("%zu extruders this layer. helper parts: %s. Islands:%zu. Layer nr: %u.\n\n", extruder_order.size(), include_helper_parts ? "true" : "false", storage.support.supportLayers[layer_nr].support_infill_parts.size(), layer_nr);
     
     for (const size_t& extruder_nr : extruder_order)
     {
         if (include_helper_parts)
         {
-            addSupportToGCode(storage, gcode_layer, extruder_nr);
+            if (addSupportToGCode(storage, gcode_layer, extruder_nr))
+            {
+                printf("%---> extruder nr: %zu, layer nr: %d, added something!\n", extruder_nr, layer_nr);
+            }
         }
 
         if (layer_nr >= 0)
@@ -2534,6 +2539,8 @@ bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, Layer
         return added_something;
     }
 
+    printf("---> Islands: %zu, extruder_nr: %zu, layer nr: %d\n\n", support_layer.support_infill_parts.size(), extruder_nr, gcode_layer.getLayerNr());
+
     // default extruder nr
     const Settings& mesh_group_settings = Application::getInstance().current_slice->scene.current_mesh_group->settings;
     const ExtruderTrain& infill_extruder = Application::getInstance().current_slice->scene.extruders[extruder_nr];
@@ -2579,13 +2586,16 @@ bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, Layer
 
     // create a list of outlines and use PathOrderOptimizer to optimize the travel move
     PathOrderOptimizer island_order_optimizer(gcode_layer.getLastPlannedPositionOrStartingPosition());
+    std::vector<size_t> part_idxs;
     for (size_t part_idx = 0; part_idx < support_layer.support_infill_parts.size(); ++part_idx)
     {
         const SupportInfillPart& part = support_layer.support_infill_parts[part_idx];
 
-        // only consider the islands with the extruder we are looking at right now.
+        // only consider the islands for the current extruder
         if (part.extruder_nr == extruder_nr)
         {
+            printf("-------> Island no: %zu, extruder_nr: %zu, layer nr: %d\n\n", part_idx, extruder_nr, gcode_layer.getLayerNr());
+            part_idxs.emplace_back(part_idx);
             island_order_optimizer.addPolygon(part.outline[0]);
         }
     }
@@ -2595,7 +2605,7 @@ bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, Layer
     const std::vector<SupportInfillPart>& part_list = support_layer.support_infill_parts;
     for (int part_idx : island_order_optimizer.polyOrder)
     {
-        const SupportInfillPart& part = part_list[part_idx];
+        const SupportInfillPart& part = part_list[part_idxs[part_idx]];
 
         // always process the wall overlap if walls are generated
         const int current_support_infill_overlap = (part.inset_count_to_generate > 0) ? default_support_infill_overlap : 0;
@@ -2616,6 +2626,8 @@ bool FffGcodeWriter::processSupportInfill(const SliceDataStorage& storage, Layer
                 gcode_layer.addPolygonsByOptimizer(all_insets, gcode_layer.configs_storage.support_infill_config[0]);
             }
         }
+
+        printf("-------> Island no: %zu, extruder_nr: %zu, layer nr %d, insets: %zu, densities: %zu, combines: %zu\n\n", part_idx, extruder_nr, gcode_layer.getLayerNr(), part.insets.size(), part.infill_area_per_combine_per_density.size(), (part.infill_area_per_combine_per_density.empty()) ? 0 : part.infill_area_per_combine_per_density[0].size());
 
         // process sub-areas in this support infill area with different densities
         if (default_support_line_distance <= 0

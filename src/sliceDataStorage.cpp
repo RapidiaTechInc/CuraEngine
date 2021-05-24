@@ -507,6 +507,15 @@ std::vector<bool> SliceDataStorage::getExtrudersUsed() const
         }
     }
 
+    // generated support
+    for (const SupportLayer& support_layer : support.supportLayers)
+    {
+        for (const SupportInfillPart& support_infill_part : support_layer.support_infill_parts)
+        {
+            ret[support_infill_part.extruder_nr] = true;
+        }
+    }
+
     // all meshes are presupposed to actually have content
     for (const SliceMeshStorage& mesh : meshes)
     {
@@ -568,19 +577,9 @@ std::vector<bool> SliceDataStorage::getExtrudersUsed(LayerIndex layer_nr) const
         if (layer_nr < int(support.supportLayers.size()))
         {
             const SupportLayer& support_layer = support.supportLayers[layer_nr];
-            if (layer_nr == 0)
+            for (const SupportInfillPart& part : support_layer.support_infill_parts)
             {
-                if (!support_layer.support_infill_parts.empty())
-                {
-                    ret[mesh_group_settings.get<ExtruderTrain&>("support_extruder_nr_layer_0").extruder_nr] = true;
-                }
-            }
-            else
-            {
-                if (!support_layer.support_infill_parts.empty())
-                {
-                    ret[mesh_group_settings.get<ExtruderTrain&>("support_infill_extruder_nr").extruder_nr] = true;
-                }
+                ret[part.extruder_nr] = true;
             }
             if (!support_layer.support_bottom.empty())
             {
