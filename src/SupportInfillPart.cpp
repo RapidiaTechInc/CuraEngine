@@ -7,11 +7,12 @@
 using namespace cura;
 
 
-SupportInfillPart::SupportInfillPart(const PolygonsPart& outline, coord_t support_line_width, int inset_count_to_generate)
+SupportInfillPart::SupportInfillPart(const PolygonsPart& outline, coord_t support_line_width, size_t extruder_nr, int inset_count_to_generate)
 : outline(outline)
 , outline_boundary_box(outline)
 , support_line_width(support_line_width)
 , inset_count_to_generate(inset_count_to_generate)
+, extruder_nr(extruder_nr)
 {
     insets.clear();
     infill_area.clear();

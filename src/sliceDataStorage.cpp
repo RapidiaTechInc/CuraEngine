@@ -507,6 +507,15 @@ std::vector<bool> SliceDataStorage::getExtrudersUsed() const
         }
     }
 
+    // generated support
+    for (const SupportLayer& support_layer : support.supportLayers)
+    {
+        for (const SupportInfillPart& support_infill_part : support_layer.support_infill_parts)
+        {
+            ret[support_infill_part.extruder_nr] = true;
+        }
+    }
+
     // all meshes are presupposed to actually have content
     for (const SliceMeshStorage& mesh : meshes)
     {
@@ -568,19 +577,9 @@ std::vector<bool> SliceDataStorage::getExtrudersUsed(LayerIndex layer_nr) const
         if (layer_nr < int(support.supportLayers.size()))
         {
             const SupportLayer& support_layer = support.supportLayers[layer_nr];
-            if (layer_nr == 0)
+            for (const SupportInfillPart& part : support_layer.support_infill_parts)
             {
-                if (!support_layer.support_infill_parts.empty())
-                {
-                    ret[mesh_group_settings.get<ExtruderTrain&>("support_extruder_nr_layer_0").extruder_nr] = true;
-                }
-            }
-            else
-            {
-                if (!support_layer.support_infill_parts.empty())
-                {
-                    ret[mesh_group_settings.get<ExtruderTrain&>("support_infill_extruder_nr").extruder_nr] = true;
-                }
+                ret[part.extruder_nr] = true;
             }
             if (!support_layer.support_bottom.empty())
             {
@@ -691,6 +690,7 @@ void SupportLayer::excludeAreasFromSupportInfillAreas(const Polygons& exclude_po
     for (size_t part_idx = 0; part_idx < part_count_to_check; ++part_idx)
     {
         SupportInfillPart& support_infill_part = support_infill_parts[part_idx];
+        const size_t extruder_nr = support_infill_part.extruder_nr;
 
         // if the areas don't overlap, do nothing
         if (!exclude_polygons_boundary_box.hit(support_infill_part.outline_boundary_box))
@@ -723,7 +723,7 @@ void SupportLayer::excludeAreasFromSupportInfillAreas(const Polygons& exclude_po
         for (size_t support_island_idx = 1; support_island_idx < smaller_support_islands.size(); ++support_island_idx)
         {
             const PolygonsPart& smaller_island = smaller_support_islands[support_island_idx];
-            support_infill_parts.emplace_back(smaller_island, support_infill_part.support_line_width, support_infill_part.inset_count_to_generate);
+            support_infill_parts.emplace_back(smaller_island, support_infill_part.support_line_width, extruder_nr, support_infill_part.inset_count_to_generate);
         }
     }
 
