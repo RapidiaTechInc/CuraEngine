@@ -1,4 +1,4 @@
-parallel_nodes(["linux && cura", "windows && cura"]) {
+node {
     timeout(time: 2, unit: "HOURS") {
         stage('Prepare') {
             step([$class: 'WsCleanup'])
